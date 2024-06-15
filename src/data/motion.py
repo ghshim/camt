@@ -67,15 +67,12 @@ def compute_forward_dir(motion):
     return np.array(forward_dirs)
 
 
-def compute_velocity(self, motion, dt=0.033):
+def compute_velocity(motion, forward_dir, dt=0.033):
     """
     3-dimensional global velocity of the body
     4. global velocity in the XZ-plane and rotational velocity of the body around the vertical axis (Y-axis) are appended 
     to the input representation for each frame. These can be integrated over time to recover the global translation and rotation of the motion
     """
-    if self.forward_dir is None:
-        self.compute_forward_dir()
-    
     assert dt > EPSILON
     
     # calculate linear global velocity in XZ-plane using forward direction
@@ -85,7 +82,7 @@ def compute_velocity(self, motion, dt=0.033):
     # calculate rotational velocity around the vertical axis (Y-axis)
     rotational_velocity = []
     for i in range(1, len(motion)):
-        pose1, pose2 = self.forward_dir[i-1], self.forward_dir[i]
+        pose1, pose2 = forward_dir[i-1], forward_dir[i]
         dot_product = np.dot(pose1, pose2)
         magnitude_product = np.linalg.norm(pose1) * np.linalg.norm(pose2)
         cosine_angle = dot_product / magnitude_product

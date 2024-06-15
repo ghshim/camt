@@ -302,7 +302,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    sample(args)
+    # sample(args)
 
     with open(os.path.join(args.output_dir, "exp2_prox_xform.pkl"), 'rb') as input_file:
         data = pickle.load(input_file)
@@ -333,7 +333,6 @@ if __name__ == '__main__':
                 joints.append(motion_dict[frame]['joints'])
                 transl.append(motion_dict[frame]['transl'])
                 
-            
             print(np.array(joints).shape)
             print(np.array(transl).shape)
             count += 1
