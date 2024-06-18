@@ -26,17 +26,26 @@ def test(model, dataloader, max_len=62, debug_path='./debug', device=None):
             data_name, frame_list, label, initial_pose, gt_motion, motion_descr, object_box = batch_data
             
             bs = initial_pose.shape[0]
+            
+            # initial_pose + global velocity (zeros) + rotational velocity (zeros)
             curr_pose = torch.cat([initial_pose, torch.zeros((bs,1,3), device=device), torch.zeros((bs,1,1), device=device)], dim=2)
-     
+
+            # store predicted motion
             prediction = torch.zeros((bs, max_len, 76)).to(device)
+            # predict next possible motion
             for i in range(max_len):
+                prediction[:,i,:] = curr_pose # save current pose 
                 output = model(initial_pose, object_box, motion_descr, curr_pose) # (bs, seq_len-1, 76)
-                
+                # If EoM is last pose
+                # if torch.eq(output, curr_pose).sum() != 0:
+                #     print("End of Motion")
+                #     break
+                # If EoM is zero
                 if torch.eq(output, EoM).sum() != 0:
                     print("End of Motion")
                     break
-                output = output.permute(1, 0, 2)
-                prediction[:,i,:] = output
+                curr_pose = output
+
             print(prediction)
             
             data = {'name': data_name, 'frame_list':frame_list, 'label':label,

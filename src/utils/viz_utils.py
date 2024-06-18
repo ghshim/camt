@@ -18,8 +18,6 @@ from src.utils.data_utils import find_parent_and_children, transl_transform
 from src.utils.constants import NUM_JOINTS, SKELETON, JOINT_NAMES, JOINT_HIERARHCY
 
 
-
-
 def parse_object_tokens(object_tokens):
     """
     Extract centers and sizes from the concatenated object tokens.
@@ -39,6 +37,7 @@ def parse_object_tokens(object_tokens):
     sizes = object_tokens[N:, :]
     
     return centers, sizes
+
 
 def get_bbox_corners(center, size):
     cx, cy, cz = center
@@ -63,22 +62,21 @@ def get_bbox_corners(center, size):
 
 
 def parse_motion_vector(motion_vector):
-    num_frames_minus_1, _ = motion_vector.shape
-    num_frames = num_frames_minus_1 + 1
+    num_frames = motion_vector.shape[0]
     
     poses = np.zeros((num_frames, NUM_JOINTS, 3))
-    poses[1:] = motion_vector[:, :NUM_JOINTS*3].reshape(num_frames_minus_1, NUM_JOINTS, 3)
+    poses[:] = motion_vector[:, :NUM_JOINTS*3].reshape(num_frames, NUM_JOINTS, 3)
     
     translation = np.zeros((num_frames, 3))
-    translation[1:] = motion_vector[:, NUM_JOINTS*3:NUM_JOINTS*3+3]
+    translation[:] = motion_vector[:, NUM_JOINTS*3:NUM_JOINTS*3+3]
     
     forward_direction = np.zeros((num_frames, 3))
-    forward_direction[1:] = motion_vector[:, NUM_JOINTS*3+3:NUM_JOINTS*3+6]
+    forward_direction[:] = motion_vector[:, NUM_JOINTS*3+3:NUM_JOINTS*3+6]
     
-    global_velocity = np.zeros((num_frames_minus_1, 3))
+    global_velocity = np.zeros((num_frames, 3))
     global_velocity[:] = motion_vector[:, NUM_JOINTS*3+6:NUM_JOINTS*3+9]
     
-    rotational_velocity = np.zeros((num_frames_minus_1, 1))
+    rotational_velocity = np.zeros((num_frames, 1))
     rotational_velocity[:] = motion_vector[:, NUM_JOINTS*3+9:]
     
     return poses, translation, forward_direction, global_velocity, rotational_velocity
@@ -186,10 +184,10 @@ def visualize_motion(gt_motion, pred_motion, corners):
     # poses, translation, forward_direction, global_velocity, rotational_velocity = parse_motion_vector(motion_vector, NUM_JOINTS)
     num_frames = len(gt_poses)
     
-    plt.cla()
+    
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-
+    plt.cla()
         
     # Initialize scatter plot
     # scatter = ax.scatter([], [], [])
@@ -277,20 +275,20 @@ def visualize_motion(gt_motion, pred_motion, corners):
                 ax.plot([point[0] for point in edge], [point[1] for point in edge], [point[2] for point in edge], 'g-')
         
     ani = FuncAnimation(fig, update, frames=num_frames, interval=100)
-
+    
     return ani
 
 
 def main(args):
     camt_dir = '/home/gahyeon/Desktop/data/camt'
     data_path = args.data_path
-    epoch = args.epoch
+    idx = args.idx
     output_dir = args.output_dir
     # prox_dir = args.prox_dir
     view = args.view
     save = args.save
 
-    with open(os.path.join(data_path, f"prediction/{epoch}.pkl"), 'rb') as file:
+    with open(os.path.join(data_path, f"prediction/{idx}.pkl"), 'rb') as file:
         data = pickle.load(file)
 
     with open(os.path.join(camt_dir, "scene.pkl"), 'rb') as input_file:
@@ -328,16 +326,15 @@ def main(args):
     # print(frame_list)
     gt_motion, gt_transl, gt_forward_dir, gt_global_vel, gt_rot_vel = parse_motion_vector(gt)
     gt_motion = get_abs_poses(gt_motion)
+    # print(gt_motion[0])
 
     pred_motion, pred_transl, pred_forward_dir, pred_global_vel, pred_rot_vel = parse_motion_vector(prediction)
-    pred_motion = np.concatenate([gt_motion[0,:,:].reshape(1,-1,3), pred_motion], axis=0)
-    print(pred_motion.shape)
+    pred_motion = np.concatenate([gt_motion[:1,:,:], pred_motion], axis=0)
+    pred_transl = np.concatenate([gt_transl[:1,:], pred_transl], axis=0)
     pred_motion = get_abs_poses(pred_motion)
-
-    # centers, sizes = parse_object_tokens(object_box)
-    print(gt_motion.shape)
-    print(pred_motion.shape)
+    # print(pred_motion[0])
     
+    # centers, sizes = parse_object_tokens(object_box)
     
     ani = visualize_motion([gt_motion, gt_transl, gt_forward_dir, gt_global_vel, gt_rot_vel],
                            [pred_motion, pred_transl, pred_forward_dir, pred_global_vel, pred_rot_vel],
@@ -345,14 +342,20 @@ def main(args):
     if view:
         plt.show()   
 
-
+    if save:
+        # save animation
+        os.makedirs(os.path.join(data_path, 'result'), exist_ok=True)
+        output_path = os.path.join(data_path, 'result', f"{idx}.mp4")
+        writer = FFMpegWriter(fps=10, metadata=dict(artist='Me'), bitrate=1800)
+        ani.save(output_path, writer=writer)
+        print('Saved in', output_path)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     
     # data_path = '/home/gahyeon/Desktop/projects/camt/result/pred_result.pkl'
     parser.add_argument('--data_path', type=str, default='/home/gahyeon/Desktop/data/camt/prox_sentence_encoded.pkl', help='the directory of data')
-    parser.add_argument('--epoch', type=int)
+    parser.add_argument('--idx', type=int)
     parser.add_argument('--output_dir', type=str, default='./result/output', help='the output directory of data')
     parser.add_argument('--mode', type=str, default='test', help='the directory of data')
     parser.add_argument('--view', action="store_true")

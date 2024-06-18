@@ -65,21 +65,6 @@ class MotionDataset(Dataset):
         embeddings = encode(self.labels)
         return embeddings
     
-    def compute_stats(self, data):
-        mean = np.mean(data, axis=0)
-        std = np.std(data, axis=0)
-        return mean, std
-
-    def normalize_data(self, data):
-        # print(data.shape)
-        mean = np.mean(data, axis=(0))
-        std = np.std(data, axis=(0))
-        normalized_data = (data - mean) / (std + 1e-8)  # Avoid division by zero
-        return normalized_data, mean.tolist(), std.tolist()
-
-    def save_stats_to_json(self, stats_dict, save_path):
-        with open(save_path, 'w') as f:
-            json.dump(stats_dict, f, indent=4)
 
     def create_pose_vector(self, motions, translations, forward_directions, global_velocities, rotational_velocities, JOINT_NUM=22, save=True):
         '''
@@ -94,7 +79,7 @@ class MotionDataset(Dataset):
 
         Returns:
             init_pose_vector: (num_data, 1, 72)
-            next_pose_vector: (num_data, seq_len, 76)
+            next_pose_vector: (num_data, seq_len-1, 76)
         '''
         num_data = len(motions)
         init_poses = []
@@ -140,23 +125,23 @@ class MotionDataset(Dataset):
             rot_vel = torch.unsqueeze(torch.unsqueeze(torch.tensor(rotational_velocities[i], dtype=torch.float32), dim=1), dim=1)  # (seq_len-1) -> (seq_len-1, 1, 1)
             
             # Flatten data
-            motion_flat = motion.view(-1, 22 * 3)  # (NUM_FRAMES, 22*3)
-            transl_flat = transl.view(-1, 3)  # (NUM_FRAMES, 3)
-            forward_dir_flat = forward_dir.view(-1, 3)  # (NUM_FRAMES, 3)
-            global_vel_flat = global_vel.view(-1, 3)  # ((NUM_FRAMES-1), 3)
-            rot_vel_flat = rot_vel.view(-1, 1)  # ((NUM_FRAMES-1), 1)
+            motion_flat = motion.view(-1, 22 * 3)           # (NUM_FRAMES, 22*3)
+            transl_flat = transl.view(-1, 3)                # (NUM_FRAMES, 3)
+            forward_dir_flat = forward_dir.view(-1, 3)      # (NUM_FRAMES, 3)
+            global_vel_flat = global_vel.view(-1, 3)        # ((NUM_FRAMES-1), 3)
+            rot_vel_flat = rot_vel.view(-1, 1)              # ((NUM_FRAMES-1), 1)
 
             init_pose_vector = torch.cat([motion_flat[:1],
                                           transl_flat[:1],
-                                          forward_dir_flat[:1]], dim=1)
-    
+                                          forward_dir_flat[:1]], dim=1) # (1, 72)
+            
             next_pose_vector = torch.cat([motion_flat[1:],
                                           transl_flat[1:],
                                           forward_dir_flat[1:],
                                           global_vel_flat,
-                                          rot_vel_flat], dim=1)
+                                          rot_vel_flat], dim=1) # (seq_len-1, 76)
             
-            # add EoS token: torch.zeros((1, 76))
+            # add EoM token: torch.zeros((1, 76))
             next_pose_vector = torch.cat([next_pose_vector, torch.zeros((1, 76))], dim=0)
             
             init_poses.append(init_pose_vector)
@@ -166,29 +151,23 @@ class MotionDataset(Dataset):
 
     def normalize(self, data, mean, std):
         return (data - mean) / std
+    
+    def compute_stats(self, data):
+        mean = np.mean(data, axis=0)
+        std = np.std(data, axis=0)
+        return mean, std
 
-    def parse_motion_vector(motion_vector):
-        num_frames_minus_1, _ = motion_vector.shape
-        num_frames = num_frames_minus_1 + 1
-        
-        poses = np.zeros((num_frames, NUM_JOINTS, 3))
-        poses[1:] = motion_vector[:, :NUM_JOINTS*3].reshape(num_frames_minus_1, NUM_JOINTS, 3)
-        
-        translation = np.zeros((num_frames, 3))
-        translation[1:] = motion_vector[:, NUM_JOINTS*3:NUM_JOINTS*3+3]
-        
-        forward_direction = np.zeros((num_frames, 3))
-        forward_direction[1:] = motion_vector[:, NUM_JOINTS*3+3:NUM_JOINTS*3+6]
-        
-        global_velocity = np.zeros((num_frames_minus_1, 3))
-        global_velocity[:] = motion_vector[:, NUM_JOINTS*3+6:NUM_JOINTS*3+9]
-        
-        rotational_velocity = np.zeros((num_frames_minus_1, 1))
-        rotational_velocity[:] = motion_vector[:, NUM_JOINTS*3+9:]
-        
-        return poses, translation, forward_direction, global_velocity, rotational_velocity
-    
-    
+    def normalize_data(self, data):
+        # print(data.shape)
+        mean = np.mean(data, axis=(0))
+        std = np.std(data, axis=(0))
+        normalized_data = (data - mean) / (std + 1e-8)  # Avoid division by zero
+        return normalized_data, mean.tolist(), std.tolist()
+
+    def save_stats_to_json(self, stats_dict, save_path):
+        with open(save_path, 'w') as f:
+            json.dump(stats_dict, f, indent=4)
+
 
 def create_datasets(data_dict, device, train_ratio=0.8, val_ratio=0.0, test_ratio=0.2):
     data_list = data_dict['name']
@@ -219,11 +198,9 @@ def create_datasets(data_dict, device, train_ratio=0.8, val_ratio=0.0, test_rati
     val_size = int(val_ratio * dataset_size)
     test_size = int(test_ratio * dataset_size)
 
-    generator = torch.Generator()
-    generator.manual_seed(0)    
+    
     train_dataset, val_dataset, test_dataset = random_split(dataset, 
-                                                            [train_size, val_size, test_size],
-                                                            generator=generator)
+                                                            [train_size, val_size, test_size])
 
     return train_dataset, val_dataset, test_dataset
 

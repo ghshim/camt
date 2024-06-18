@@ -172,11 +172,6 @@ class MotionTransformer(nn.Module):
             stop_signal=None
         ):
         super().__init__()
-        # embed each input
-        # self.initial_pose_embedding = nn.Linear(in_features=dim_pose, out_features=dim_model)
-        # self.object_embedding = nn.Linear(in_features=dim_object, out_features=dim_model)
-        # self.motion_description_embedding = nn.Linear(in_features=dim_description, out_features=dim_model)
-        # self.next_motion_embedding = nn.Linear(in_features=dim_motion, out_features=dim_model)
         self.num_heads = num_heads
 
         self.initial_pose_embedding = nn.Linear(in_features=dim_pose, out_features=dim_model)
@@ -207,23 +202,20 @@ class MotionTransformer(nn.Module):
         next_motion_desc: (bs, 384)
         gt_motion: (bs, num_frames, 76)
         '''
-        max_seq_len = 61
         # print("## MotionTransformer: initial_pose", initial_pose.shape)
         # print("## MotionTransformer: obj_bboxes", obj_bboxes.shape)
         # print("## MotionTransformer: motion_desc", motion_desc.unsqueeze(1).shape)
         
         # Embedding
-        initial_pose_ = self.initial_pose_embedding(initial_pose)
-        obj_bboxes_ = self.object_embedding(obj_bboxes)
-        motion_desc_ = self.description_embedding(motion_desc).unsqueeze(1)
-        # gt_motion_ = self.gt_motion_embedding(gt_motion)
-
+        initial_pose_ = self.initial_pose_embedding(initial_pose)               # (bs, 1, 72) -> (bs, 1, dim_model)
+        obj_bboxes_ = self.object_embedding(obj_bboxes)                         # (bs, num_objs, 3) -> (bs, num_objs, dim_model)
+        motion_desc_ = self.description_embedding(motion_desc).unsqueeze(1)     # (bs, 384) -> (bs, 1, 384) -> (bs, 1, dim_model)
+        
         # context
-        src = torch.cat([initial_pose_, motion_desc_, obj_bboxes_], dim=1) # (bs, num_frames+num_objs+1, dim_model)
+        src = torch.cat([initial_pose_, motion_desc_, obj_bboxes_], dim=1) # (bs, seq_len + num_objs + 1, dim_model)
         # print("## src", src.shape)
         
         '''Encoder'''
-        # src_key_padding_mask = self.get_pad_mask(gt_motion)
         memory = self.encoder(src)
         
         '''Decoder'''
@@ -242,9 +234,6 @@ class MotionTransformer(nn.Module):
         # print("padded_seq:", p)
         return padded_seq
     
-    # def get_src_mask(self, src):
-    #     src_mask = (src != self.)
-
     def get_tgt_mask(self, tgt):
         size = tgt.size(1)
         mask = torch.tril(torch.ones(size, size) == 1)

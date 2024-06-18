@@ -62,23 +62,18 @@ def fit(model, epochs, opt, loss_fn, train_dataloader, val_dataloader, debug_pat
         total_loss = 0
 
         for batch_data in train_dataloader:
+            '''
+            initial_pose: (bs, 1, 72)
+            object_boxes: (bs, num_objs, 3)
+            next_motion_desc: (bs, 384)
+            gt_motion: (bs, num_frames, 76)
+            '''
             data_name, frame_list, label, initial_pose, gt_motion, motion_descr, object_box = batch_data
 
-            # padded_gt_next_motion = model.pad_motion(gt_next_motion)
-            # print('[Batch] initial_pose.shape', initial_pose.shape)
-            # print('[Batch] object_box.shape', object_boxes.shape)
-            # print('[Batch] motion_description.shape', next_motion_description.shape)
-            # print('[Batch] next_motion.shape:', next_motion.shape)
-            # print('------------------------\n')
-            # padded_gt_motion = pad_motion(gt_motion)
+            # padded_motion = pad_motion(gt_motion)
             tgt_mask = get_tgt_mask(gt_motion[:,:-1,:]).to(device)
-            output = model(initial_pose, object_box, motion_descr, gt_motion[:,:-1,:], tgt_mask=tgt_mask) # (bs, seq_len-1, 76)
-            
-            # print("[Result] output shape", output.shape)
-            # print("[Prediction]\n", output_probs.permute(1, 0, 2))
-            # print("[next motion]\n", next_motion)
-            # padded_gt_motion = pad_motion(gt_motion)
-            # print(gt_motion[:,1:,:].shape)
+            # predict EoM token (EoM: torch.zeros((1, 76)))
+            output = model(initial_pose, object_box, motion_descr, gt_motion[:,:-1,:], tgt_mask=tgt_mask) # output: (bs, seq_len-1, 76)
             loss = loss_fn(output, gt_motion[:,1:,:])  # loss calculate (0, 2, 1)
             
             opt.zero_grad()
@@ -87,23 +82,29 @@ def fit(model, epochs, opt, loss_fn, train_dataloader, val_dataloader, debug_pat
 
             total_loss += loss.item()
 
+        # save prediction result for debugging
         data = {'name': data_name, 'frame_list':frame_list, 'label':label,
-                     'object_box': object_box.detach().cpu().numpy(), 
-                     'prediction': output.detach().cpu().numpy(),
-                     'gt': gt_motion.detach().cpu().numpy()}
+                'object_box': object_box.detach().cpu().numpy(), 
+                'prediction': output.detach().cpu().numpy(),
+                'gt': gt_motion.detach().cpu().numpy()}
         
         with open(os.path.join(debug_path, f'{epoch}.pkl'), 'wb') as output:
             pickle.dump(data, output)
 
         torch.save(model.state_dict(), os.path.join(debug_path, "../last.pt"))
 
+        # loss calculation
         train_loss = total_loss / len(train_dataloader)
         train_loss_list.append(train_loss)
         print(f"Training loss: {train_loss:.4f}")        
         
     return train_loss_list, None
 
+
 def get_tgt_mask(tgt):
+    '''
+    Make (seq_len, seq_len) target mask
+    '''
     # bs = tgt.size(0)
     # seq_len = tgt.size(1)
     # mask = torch.tril(torch.ones(seq_len, seq_len) == 1)
@@ -121,6 +122,16 @@ def get_tgt_mask(tgt):
     mask = mask.masked_fill(mask==1, float(0.0))    # convert ones to 0
     return mask
 
+
+def pad_motion(motion, max_seq_len=61):
+    # print(f"Next motion sequence length: {next_motion.size(1)}")
+    padding = (motion[:, -1, :].unsqueeze(0)).repeat(1, max_seq_len - motion.size(1), 1) 
+    padded_seq = torch.cat([motion, padding], dim=1)
+    # print(f"Padded next motion sequence length: {padded_seq.size(1)}")
+    # print("next motion:", next_motion.shape)
+    # print("padded_seq:", p)
+    return padded_seq
+
 def train(train_dataloader, val_dataloader, debug_path='./debug', device=None):
     '''
     initial_poses shape: torch.Size([1, 76])
@@ -129,6 +140,7 @@ def train(train_dataloader, val_dataloader, debug_path='./debug', device=None):
     next_motions shape: torch.Size([25, 76])
     '''
     debug_path = os.path.join(debug_path, 'train')
+
     learning_rate = 0.005
     dropout_p = 0.1
     num_epochs = 100
@@ -136,9 +148,10 @@ def train(train_dataloader, val_dataloader, debug_path='./debug', device=None):
     num_tokens = 76 # output dimension
     dim_model = 512
     num_heads = 8
-    num_encoder_layers = 6
-    num_decoder_layers = 6
+    num_encoder_layers = 8
+    num_decoder_layers = 8
 
+    # save configs
     config = {
         "learning_rate": learning_rate,
         "dropout_p": dropout_p,
@@ -158,6 +171,7 @@ def train(train_dataloader, val_dataloader, debug_path='./debug', device=None):
     dim_description = 384 
     dim_motion = 76
 
+    # initialize MotionTransformer
     model = MotionTransformer(num_tokens=num_tokens, dim_model=dim_model, num_heads=num_heads, 
                               num_encoder_layers=num_encoder_layers, num_decoder_layers=num_decoder_layers, 
                               dropout_p=dropout_p, device=device, dim_pose=dim_pose, dim_object=dim_object, 
@@ -165,8 +179,11 @@ def train(train_dataloader, val_dataloader, debug_path='./debug', device=None):
     opt = torch.optim.Adam(model.parameters(), lr=learning_rate)
     loss_fn = nn.MSELoss()
 
-    train_loss_list, validation_loss_list = fit(model, num_epochs, opt, loss_fn, train_dataloader, val_dataloader, debug_path=debug_path, device=device)
-
+    # train
+    train_loss_list, validation_loss_list = fit(model, num_epochs, opt, loss_fn, train_dataloader, val_dataloader, \
+                                                debug_path=debug_path, device=device)
+    
+    # save trained model
     torch.save(model.state_dict(), os.path.join(debug_path, "model.pt"))
 
     return train_loss_list, validation_loss_list, model

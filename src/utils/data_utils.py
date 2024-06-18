@@ -172,14 +172,14 @@ def load_data(data_dir, relative=True):
 
             forward_dir = compute_forward_dir(poses)
             global_vel, rot_vel = compute_velocity(poses, forward_dir)
-
+            
             if relative:                
                 # get relative joints 
                 rel_joints = np.copy(poses)
                 for idx, children_idx in JOINT_HIERARHCY.items():
                     for child_idx in children_idx:
                         poses[:,child_idx,:] -= rel_joints[:,idx,:]
-
+            
             # apply gaussian filter to poses(motion) for smoothing
             filtered_motion = apply_gaussian_filter(np.array(poses))
             

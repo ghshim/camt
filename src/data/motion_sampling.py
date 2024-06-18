@@ -136,9 +136,11 @@ def load_prox(data, frame_list, model_folder, prox_dir, gender=None, num_pca_com
             continue
         
         if xform:
+            print(joints)
             # get 3D joint positiions from smplx model output and apply cam2world transformation
             joints = transform(trans, joints[:NUM_JOINTS, :])
             
+            print(joints)
             # get translation and apply cam2world transformation
             transl = transl_transform(trans, transl)
             
