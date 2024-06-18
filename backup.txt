@@ -1,0 +1,58 @@
+# cam2world_dir = os.path.join(prox_dir, 'cam2world')
+    
+    # ext = os.path.splitext(data_path)[1]
+
+    # if ext == '.pkl':
+    #     with open(data_path, 'rb') as input_file:
+    #         data = pickle.load(input_file)
+    #     print(data)
+    #     for data_dict in data:
+            
+    #         frame_lists = data_dict['frame_lists']
+    #         labels = data_dict['labels']
+    #         object_boxes = data_dict['object_boxes']
+    #         motions = data_dict['motions']
+    #         translations = data_dict['translations']
+    #         forward_directions = data_dict['forward_directions']
+    #         global_velocities = data_dict['global_velocities']
+    #         rotational_velocities = data_dict['rotational_velocities']
+            
+    #         for i in range(len(data)):
+    #             frame_list = frame_lists[i]
+    #             label = labels[i]
+    #             objs = object_boxes[i]
+    #             motion = motions[i]
+    #             transl = translations[i]
+    #             forward_dir = forward_directions[i]
+    #             global_vel = global_velocities[i]
+    #             rot_vel = rotational_velocities[i]
+    #             print(rel_motion)
+    #             print(transl)
+    #             print(forward_dir)
+    #             print(global_vel)
+    #             print(rot_vel)
+    #             return
+    #             ani = visualize_motion(motion, transl, forward_dir, global_vel, rot_vel)
+                
+    #             if view:
+    #                 plt.show()
+    #             if save:
+    #                 # save animation
+    #                 output_path = os.path.join(output_dir, data_name, label)
+    #                 os.makedirs(output_path, exist_ok=True)
+
+    #                 writer = FFMpegWriter(fps=10, metadata=dict(artist='Me'), bitrate=1800)
+    #                 output_path = os.path.join(output_path, f'{label}.mp4')
+    #                 ani.save(output_path, writer=writer)
+                    
+    #                 # save GT RGB frames
+    #                 output_path = os.path.join(output_dir, data_name, label, 'rgb')
+    #                 os.makedirs(output_path, exist_ok=True)
+    #                 for frame in frame_list:
+    #                     source_path = os.path.join(prox_dir, data_name, 'Color', f'{frame}.jpg')
+    #                     target_path = os.path.join(output_path, f'{frame}.jpg')
+    #                     shutil.copyfile(source_path, target_path)
+    #                 print(f"Saved in {output_path}")
+    #             count += 1
+
+    # elif ext == '.npy':

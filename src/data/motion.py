@@ -13,7 +13,7 @@ def apply_gaussian_filter(motion, sigma=1.0):
     poses: (FRAME_NUM, JOINT_NUM, 3)
     """
     from scipy.ndimage import gaussian_filter
-
+    
     motion = motion.reshape(motion.shape[0], -1)
     # print(motion.shape)
     for i in range(motion.shape[1]):
