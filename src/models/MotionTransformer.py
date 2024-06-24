@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import math
+import numpy as np
 
 '''
 TODO
@@ -15,6 +16,7 @@ class PositionalEncoding(nn.Module):
     '''
     def __init__(self, dim_model, dropout_p, max_len):
         super().__init__()
+        self.dim_model = dim_model
         self.dropout = nn.Dropout(dropout_p)
 
         # Encoding
@@ -29,6 +31,7 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("pos_encoding", pos_encoding)
 
     def forward(self, token_embedding):
+        token_embedding = np.sqrt(self.dim_model) * token_embedding
         # Residual connection + pos encoding
         return self.dropout(token_embedding + self.pos_encoding[:token_embedding.size(0), :])
 

@@ -141,15 +141,15 @@ def train(train_dataloader, val_dataloader, debug_path='./debug', device=None):
     '''
     debug_path = os.path.join(debug_path, 'train')
 
-    learning_rate = 0.005
+    learning_rate = 0.0001
     dropout_p = 0.1
     num_epochs = 100
 
     num_tokens = 76 # output dimension
     dim_model = 512
     num_heads = 8
-    num_encoder_layers = 8
-    num_decoder_layers = 8
+    num_encoder_layers = 6
+    num_decoder_layers = 6
 
     # save configs
     config = {
@@ -177,7 +177,7 @@ def train(train_dataloader, val_dataloader, debug_path='./debug', device=None):
                               dropout_p=dropout_p, device=device, dim_pose=dim_pose, dim_object=dim_object, 
                               dim_description=dim_description, dim_motion=dim_motion).to(device)
     opt = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    loss_fn = nn.MSELoss()
+    loss_fn = nn.MSELoss(reduction='sum')
 
     # train
     train_loss_list, validation_loss_list = fit(model, num_epochs, opt, loss_fn, train_dataloader, val_dataloader, \
