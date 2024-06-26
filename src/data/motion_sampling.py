@@ -136,13 +136,13 @@ def load_prox(data, frame_list, model_folder, prox_dir, gender=None, num_pca_com
             continue
         
         if xform:
-            print(joints)
+            # print(joints)
             # get 3D joint positiions from smplx model output and apply cam2world transformation
-            joints = transform(trans, joints[:NUM_JOINTS, :])
+            joints = c2w_transform_joints(trans, joints[:NUM_JOINTS, :])
             
-            print(joints)
+            # print(joints)
             # get translation and apply cam2world transformation
-            transl = transl_transform(trans, transl)
+            transl = c2w_transform(trans, transl)
             
 
         pose = {'joints':joints, 'transl':transl}
@@ -304,9 +304,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    sample(args)
+    # sample(args)
 
-    with open(os.path.join(args.output_dir, "exp2_prox_xform.pkl"), 'rb') as input_file:
+    with open(os.path.join(args.output_dir, "prox_xform.pkl"), 'rb') as input_file:
         data = pickle.load(input_file)
 
     count = 0

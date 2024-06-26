@@ -24,6 +24,22 @@ def find_parent_and_children(joint_idx, joints):
     return parent, children
 
 
+def c2w_transform(trans, data_c):
+    '''
+    Transform cam coordinate to world coordinate
+    v_w = R_c2w • v_c + t_c2w
+    '''
+    R_c2w = trans[:3, :3] # rotation
+    t_c2w = trans[:3, 3]  # translation
+    return np.dot(R_c2w, data_c) + t_c2w
+
+
+def c2w_transform_joints(trans, joints):
+    R_c2w = trans[:3, :3] # rotation
+    t_c2w = trans[:3, 3]  # translation
+    return np.dot(joints, R_c2w.T) + t_c2w
+
+
 def transform(trans_mat, data):
     transformed_data = np.dot(np.hstack((data, np.ones((len(data), 1)))), trans_mat.T)
     transformed_data = transformed_data[:, :3]  
