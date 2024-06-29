@@ -34,10 +34,16 @@ def c2w_transform(trans, data_c):
     return np.dot(R_c2w, data_c) + t_c2w
 
 
+def c2w_transform(trans, data_c):
+    R_c2w = trans[:3, :3] # rotation matrix
+    t_c2w = trans[:3, 3]  # translation matrix
+    data_w = np.dot(data_c - t_c2w, np.linalg.inv(R_c2w))
+    return data_w
+
 def c2w_transform_joints(trans, joints):
     R_c2w = trans[:3, :3] # rotation
     t_c2w = trans[:3, 3]  # translation
-    return np.dot(joints, R_c2w.T) + t_c2w
+    return np.dot(joints, R_c2w) + t_c2w
 
 
 def transform(trans_mat, data):

@@ -282,7 +282,7 @@ def sample(args):
     
     if saving:
         os.makedirs(output_dir, exist_ok=True)
-        save_motions(samples, os.path.join(output_dir, 'prox_xform.pkl'))
+        save_motions(samples, os.path.join(output_dir, 'prox.pkl'))
 
     print(count)
     print("sample count:", sum(count.values()))
@@ -304,9 +304,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # sample(args)
+    sample(args)
 
-    with open(os.path.join(args.output_dir, "prox_xform.pkl"), 'rb') as input_file:
+    with open(os.path.join(args.output_dir, "prox.pkl"), 'rb') as input_file:
         data = pickle.load(input_file)
 
     count = 0

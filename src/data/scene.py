@@ -78,7 +78,8 @@ def main(args):
             obj_path = obj[1]
             
             obj_mesh = pickle.load(open(obj_path, 'rb'))
-            vertices = transform(trans, obj_mesh['vertices'])
+            vertices = obj_mesh['vertices']
+            # vertices = c2w_transform(trans, obj_mesh['vertices'])
             
             min_corner, max_corner = find_min_max_corners(vertices)
             
@@ -132,8 +133,8 @@ def main(args):
         # plt.show()
         
         
-        normalized_centers = normalize(np.array(centers))
-        normalized_sizes = normalize(np.array(sizes))
+        # normalized_centers = normalize(np.array(centers))
+        # normalized_sizes = normalize(np.array(sizes))
 
         # print("centers:", centers)
         # print("normalized centers:", normalized_centers)
@@ -154,7 +155,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--scene_dir', type=str, default='/home/gahyeon/Desktop/data/mover/PROX_cropped_meshes_bboxes/PROX_cropped_meshes_bboxes/qualitative_dataset/obb', help='the directory of 3d bounding boxes')
-    parser.add_argument('--scene_dir', type=str, default='/home/gahyeon/Desktop/data/prox', help='the directory of prox dataset')
+    parser.add_argument('--prox_dir', type=str, default='/home/gahyeon/Desktop/data/prox', help='the directory of prox dataset')
     # parser.add_argument('--label_dir', type=str, default='/home/gahyeon/Desktop/data/prox/interaction_labels_1', help='the directory of prox dataset')
     # parser.add_argument('--sampling', default=False)
     # parser.add_argument('--time', default=7)

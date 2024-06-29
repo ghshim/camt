@@ -182,14 +182,14 @@ def viz_motion(motion, corners):
         # Calculate the current translation and forward direction based on velocities
         current_translation = translation[frame]
         
-        if frame == 0:
-            forward_direction = np.array([1, 0, 0])
-        else:
-            # current_translation = translation[frame] #+ global_velocity[frame - 1]
-            current_forward_direction = forward_direction[frame - 1]
-            # current_forward_direction = rotate_vector(forward_direction[frame - 1], 
-            #                                           rotational_velocity[frame - 1], 
-            #                                           np.array([0, 1, 0]))  # Assuming Y-axis rotation
+        # if frame == 0:
+        #     forward_direction = np.array([1, 0, 0])
+        # else:
+        #     # current_translation = translation[frame] #+ global_velocity[frame - 1]
+        #     current_forward_direction = forward_direction[frame - 1]
+        #     # current_forward_direction = rotate_vector(forward_direction[frame - 1], 
+        #     #                                           rotational_velocity[frame - 1], 
+        #     #                                           np.array([0, 1, 0]))  # Assuming Y-axis rotation
         current_pose = poses[frame,:,:]
         
         # if frame < num_frames:

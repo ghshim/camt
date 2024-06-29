@@ -5,6 +5,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
 import torch.nn.functional as F
 
 from src.models.MotionTransformer import MotionTransformer
@@ -176,7 +177,8 @@ def train(train_dataloader, val_dataloader, debug_path='./debug', device=None):
                               num_encoder_layers=num_encoder_layers, num_decoder_layers=num_decoder_layers, 
                               dropout_p=dropout_p, device=device, dim_pose=dim_pose, dim_object=dim_object, 
                               dim_description=dim_description, dim_motion=dim_motion).to(device)
-    opt = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    opt = torch.optim.AdamW(model.parameters(), lr=learning_rate, betas=(0.9, 0.999), eps=1e-08, weight_decay=0, amsgrad=False)
+    scheduler = CosineAnnealingWarmRestarts(opt, T_0=30, T_mult=1, eta_min=1e-6, last_epoch=-1)
     loss_fn = nn.MSELoss(reduction='sum')
 
     # train
