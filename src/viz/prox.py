@@ -8,6 +8,25 @@ import open3d as o3d
 import torch
 import smplx
 
+def transform_mesh(mesh, trans):
+    vertices = np.asarray(mesh.vertices)
+    R = trans[:3, :3] # rotation
+    t = trans[:3, 3]  # translation
+    vertices_w = np.dot(R, vertices.T).T + t
+    mesh.vertices = o3d.utility.Vector3dVector(vertices_w)
+    return mesh
+
+def c2w_transform_mesh(mesh, trans):
+    vertices = np.asarray(mesh.vertices)
+    R = trans[:3, :3] # rotation
+    t = trans[:3, 3]  # translation
+    vertices = vertices - t
+    vertices_w = np.dot(vertices, np.linalg.inv(R))
+    # vertices_w = np.dot((vertices.T - t), np.linalg.inv(R))
+    mesh.vertices = o3d.utility.Vector3dVector(vertices_w)
+    return mesh
+
+
 def load_scene(scene_dir):
     '''Load scene'''
     mesh_list = os.listdir(scene_dir)
@@ -46,8 +65,8 @@ def viz_prox(data_name, objs_mesh_list, frame_list, smplx_model_dir, num_pca_com
     vis = o3d.visualization.Visualizer()
     vis.create_window()
 
-    # with open(os.path.join(cam2world_dir, scene_name + '.json'), 'r') as f:
-    #     trans = np.array(json.load(f))
+    with open(os.path.join(cam2world_dir, scene_name + '.json'), 'r') as f:
+        trans = np.array(json.load(f))
     # with open(os.path.join(mover_dir, 'model_scene_1_lr0.002_end.json'), 'r') as f:
     #     trans = np.array(json.load(f))
     world2cam_dir = '/home/gahyeon/Desktop/data/mover/PROX_cropped_meshes_bboxes/PROX_cropped_meshes_bboxes/world2cam/qualitative_dataset'
@@ -59,22 +78,24 @@ def viz_prox(data_name, objs_mesh_list, frame_list, smplx_model_dir, num_pca_com
     t_vec = np.array([0.0, 0.0, 0.0])
 
     # 3x3 회전 행렬을 4x4 변환 행렬로 확장
-    trans = np.eye(4)
-    trans[:3, :3] = inverse_mat
-    trans[:3, 3] = t_vec
+    w2c_trans = np.eye(4)
+    w2c_trans[:3, :3] = inverse_mat
+    w2c_trans[:3, 3] = t_vec
 
         
     gp_mesh = o3d.io.read_triangle_mesh(os.path.join(mover_dir, 'model_scene_1_lr0.002_end/gp_mesh.obj'))
+    gp_mesh.transform(trans)
+    
     vis.add_geometry(gp_mesh)
+    
     '''Load objects in the scene'''
     for obj in objs_mesh_list:
         obj_mesh = o3d.io.read_triangle_mesh(obj[1])
-        # print("obj_mesh", np.asarray(obj_mesh.vertices))
+        obj_mesh.transform(w2c_trans)
         obj_mesh.transform(trans)
         vis.add_geometry(obj_mesh)
     
     '''Load body'''
-    
     # smplx model
     female_subjects_ids = [162, 3452, 159, 3403]
     subject_id = int(data_name.split('_')[1])
@@ -132,7 +153,9 @@ def viz_prox(data_name, objs_mesh_list, frame_list, smplx_model_dir, num_pca_com
         body.vertex_normals = o3d.utility.Vector3dVector([])
         body.triangle_normals = o3d.utility.Vector3dVector([])
         body.compute_vertex_normals()
-        # body.transform(trans)
+        body.transform(trans)
+ 
+        # body = transform_mesh(body, trans)
 
         color_img = cv2.imread(os.path.join(color_dir, frame_name + '.jpg'))
         color_img = cv2.flip(color_img, 1)
